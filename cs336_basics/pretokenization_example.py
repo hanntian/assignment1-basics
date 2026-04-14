@@ -1,7 +1,8 @@
 import os
 from typing import BinaryIO
-
-
+import multiprocessing as mp
+import regex as re
+from collections import Counter
 def find_chunk_boundaries(
     file: BinaryIO,
     desired_num_chunks: int,
@@ -48,15 +49,46 @@ def find_chunk_boundaries(
     # Make sure all boundaries are unique, but might be fewer than desired_num_chunks
     return sorted(set(chunk_boundaries))
 
+def process_chunk(args):
+    chunk, special_tokens = args
+    
+    pattern = "|".join(re.escape(tok) for tok in special_tokens)
+    parts = re.split(pattern, chunk)
+    # Step 2: 定义regex pattern
+    PAT = r"""'(?:[sdmt]|ll|ve|re)| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+"""
+    counter = Counter()
+    # Step 3: 应用regex并计数频率
+    for part in parts:
+        if not part:
+            continue
+        tokens = re.findall(PAT, part)
+        counter.update(tokens)
 
-## Usage
-with open(..., "rb") as f:
-    num_processes = 4
-    boundaries = find_chunk_boundaries(f, num_processes, b"<|endoftext|>")
+    return counter
 
-    # The following is a serial implementation, but you can parallelize this
-    # by sending each start/end pair to a set of processes.
-    for start, end in zip(boundaries[:-1], boundaries[1:]):
-        f.seek(start)
-        chunk = f.read(end - start).decode("utf-8", errors="ignore")
-        # Run pre-tokenization on your chunk and store the counts for each pre-token
+
+# Step 1: 并行获取chunks
+def get_chunk_in_parallel(file_path, special_tokens):
+    with open(file_path, "rb") as f:
+        num_processes = 4
+        boundaries = find_chunk_boundaries(f, num_processes, b"<|endoftext|>")
+        args = []
+        # The following is a serial implementation, but you can parallelize this
+        # by sending each start/end pair to a set of processes.
+        for start, end in zip(boundaries[:-1], boundaries[1:]):
+            f.seek(start)
+            chunk = f.read(end - start).decode("utf-8", errors="ignore")
+            args.append((chunk, special_tokens))
+    # Run pre-tokenization on your chunk and store the counts for each pre-token
+    with mp.Pool(num_processes) as pool:
+        chunk_counters = pool.map(process_chunk, args)
+    # Step 4: 合并所有 chunk 的结果
+    total_counter = Counter()
+    for c in chunk_counters:
+        total_counter.update(c)
+    return total_counter
+
+if __name__ == '__main__':
+    print(get_chunk_in_parallel("../data/TinystoriesV2-GPT4-valid.txt", ["<|endoftext|>"]))
+
+        
