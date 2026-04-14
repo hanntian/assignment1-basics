@@ -589,4 +589,111 @@ def run_train_bpe(
                 representing that <token1> was merged with <token2>.
                 Merges are ordered by order of creation.
     """
-    raise NotImplementedError
+    # Step 1: Vocab initialization
+    vocab = {i: bytes([i]) for i in range(256)}
+    next_id = 256
+    for tok in special_tokens:
+        vocab[next_id] = tok.encode("utf-8")
+        next_id += 1
+
+    # Step 2: Pretokenization and counting
+    token_freqs = get_chunk_in_parallel(input_path, special_tokens)
+    # token转化成bytes
+    token_freqs = {
+        tuple(bytes([b]) for b in token.encode("utf-8")): freq
+        for token, freq in token_freqs.items()
+    }
+    # Step 3: Compute BPE merges, until we have `vocab_size` items in the vocab
+    pair_counts = Counter()
+    # 统计所有相邻 pair
+    for token_seq, freq in token_freqs.items():
+        for i in range(len(token_seq) - 1):
+            pair_counts[(token_seq[i], token_seq[i + 1])] += freq
+
+    merges = []
+    while len(vocab) < vocab_size:
+        if not pair_counts:
+            break
+
+        best_pair = max(pair_counts.items(), key=lambda x: (x[1], x[0]))[0]
+        new_token = best_pair[0] + best_pair[1]
+        vocab[next_id] = new_token
+        next_id += 1
+        merges.append(best_pair)
+
+        # Only sequences that contain `best_pair` need to be updated.
+        new_token_freqs = {}
+        for token_seq, freq in token_freqs.items():
+            has_best_pair = False
+            for i in range(len(token_seq) - 1):
+                if token_seq[i] == best_pair[0] and token_seq[i + 1] == best_pair[1]:
+                    has_best_pair = True
+                    break
+
+            if not has_best_pair:
+                new_token_freqs[token_seq] = new_token_freqs.get(token_seq, 0) + freq
+                continue
+
+            for i in range(len(token_seq) - 1):
+                pair = (token_seq[i], token_seq[i + 1])
+                pair_counts[pair] -= freq
+                if pair_counts[pair] == 0:
+                    del pair_counts[pair]
+
+            new_seq = []
+            i = 0
+            while i < len(token_seq):
+                if (
+                    i < len(token_seq) - 1
+                    and token_seq[i] == best_pair[0]
+                    and token_seq[i + 1] == best_pair[1]
+                ):
+                    new_seq.append(new_token)
+                    i += 2
+                else:
+                    new_seq.append(token_seq[i])
+                    i += 1
+
+            new_seq = tuple(new_seq)
+
+            for i in range(len(new_seq) - 1):
+                pair = (new_seq[i], new_seq[i + 1])
+                pair_counts[pair] += freq
+
+            new_token_freqs[new_seq] = new_token_freqs.get(new_seq, 0) + freq
+
+        token_freqs = new_token_freqs
+        
+
+    return vocab, merges
+
+
+
+if __name__ == '__main__':
+    demo_input_path = Path(__file__).resolve().parents[1] / "data" / "TinyStoriesV2-GPT4-valid.txt"
+    output_dir = Path(__file__).resolve().parents[1] / "artifacts" / "train_bpe_tinystories"
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    profiler = cProfile.Profile()
+    profiler.enable()
+    vocab, merges = run_train_bpe(demo_input_path, 10000, ["<|endoftext|>"])
+    profiler.disable()
+
+    profiler.dump_stats(output_dir / "train_bpe.prof")
+    with open(output_dir / "train_bpe_profile.txt", "w", encoding="utf-8") as f:
+        stats = pstats.Stats(profiler, stream=f)
+        stats.strip_dirs().sort_stats("cumtime").print_stats(30)
+
+    with open(output_dir / "vocab.txt", "w", encoding="utf-8") as f:
+        for token_id, token_bytes in vocab.items():
+            f.write(f"{token_id}\t{token_bytes!r}\n")
+
+    with open(output_dir / "merges.txt", "w", encoding="utf-8") as f:
+        for left, right in merges:
+            f.write(f"{left!r} {right!r}\n")
+
+    print("saved vocab to", output_dir / "vocab.txt")
+    print("saved merges to", output_dir / "merges.txt")
+    print("saved profile to", output_dir / "train_bpe.prof")
+    print("saved readable profile to", output_dir / "train_bpe_profile.txt")
+
