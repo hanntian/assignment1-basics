@@ -10,7 +10,7 @@ from jaxtyping import Bool, Float, Int
 from torch import Tensor
 from cs336_basics.pretokenization_example import get_chunk_in_parallel
 from collections import Counter
-from tests.tokenizer import Tokenizer
+from cs336_basics.tokenizer import Tokenizer
 
 
 def run_linear(
