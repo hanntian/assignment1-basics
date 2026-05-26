@@ -18,6 +18,7 @@ class RMSNorm(nn.Module):
    
 
     def forward(self, x: Tensor) -> Tensor:
+        # should upcast the input to torch.float32 to prevent overflow when we square the input.
         in_type = x.dtype
         x = x.to(torch.float32)
         # Step 1: compute the root mean square (RMS) of the input
