@@ -1,5 +1,5 @@
-
-from torch import nn
+from torch import nn, Tensor
+import torch
 from cs336_basics.embedding import Embedding
 from cs336_basics.linear import Linear
 from cs336_basics.transformer_block import TransformerBlock
