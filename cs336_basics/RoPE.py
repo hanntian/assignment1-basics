@@ -21,8 +21,8 @@ class RoPE(nn.Module):
         if d_k % 2 != 0:
             raise ValueError("d_k must be even for RoPE.")
         
-        positions = torch.arange(max_seq_len, device=device, dtype=torch.float32) # 1 dimesion:(max_seq_len,)
-        pair_indices = torch.arange(d_k // 2, device=device, dtype=torch.float32) # 1 dimension:(d_k // 2,)
+        positions = torch.arange(max_seq_len, device=device, dtype=torch.float32) # 1 dimesion数组:(max_seq_len,)
+        pair_indices = torch.arange(d_k // 2, device=device, dtype=torch.float32) # 1 dimension数组:(d_k // 2,)
         
         angles = positions[:, None] / (theta ** ((2 * pair_indices[None, :]) / d_k)) #(max_seq_len, d_k // 2)
         cos_values = torch.cos(angles)
@@ -51,7 +51,7 @@ class RoPE(nn.Module):
         R = self.R[token_positions.to(device=self.R.device)].to(dtype=x.dtype) #(batch, seq_len, d_k // 2, 2, 2)
         
         x_pairs = x.reshape(*batch_dims, seq_len, d_k // 2, 2)
-        rotated = torch.einsum("...spij,...spj->...spi", R, x_pairs) #(*batch_dims, seq_len, d_k // 2, 2)
+        rotated = torch.einsum("...spij,...spj->...spi", R, x_pairs) #(*batch_dims, seq_len, d_k // 2, 2,1)
         
         return rotated.reshape(*batch_dims, seq_len, d_k) 
 
