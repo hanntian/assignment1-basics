@@ -23,6 +23,7 @@ from cs336_basics.SwiGLU import SwiGLU
 from cs336_basics.RoPE import RoPE
 from cs336_basics.scaled_dot_product_attention import softmax, scaled_dot_product_attention
 from cs336_basics.transformer_block import TransformerBlock
+from cs336_basics.Transformer_LM import Transformer_LM
 
 def run_linear(
     d_in: int,
@@ -415,7 +416,29 @@ def run_transformer_lm(
         Float[Tensor, "batch_size sequence_length vocab_size"]: Tensor with the predicted unnormalized
         next-word distribution for each token.
     """
-    raise NotImplementedError
+    transformer_lm = Transformer_LM(vocab_size, context_length, d_model, num_layers, num_heads,d_ff,rope_theta,)
+
+    # 把参考 state dict 的 key 映射到我们自己实现里 nn.Module 的命名
+    mapped = {
+        "token_embedding.embedding_mat": weights["token_embeddings.weight"],
+        "norm.gain":                     weights["ln_final.weight"],
+        "output_projection.W":           weights["lm_head.weight"],
+    }
+    for i in range(num_layers):
+        mapped[f"layers.{i}.attn.W_q.weight"] = weights[f"layers.{i}.attn.q_proj.weight"]
+        mapped[f"layers.{i}.attn.W_k.weight"] = weights[f"layers.{i}.attn.k_proj.weight"]
+        mapped[f"layers.{i}.attn.W_v.weight"] = weights[f"layers.{i}.attn.v_proj.weight"]
+        mapped[f"layers.{i}.attn.W_o.weight"] = weights[f"layers.{i}.attn.output_proj.weight"]
+        mapped[f"layers.{i}.norm1.gain"]      = weights[f"layers.{i}.ln1.weight"]
+        mapped[f"layers.{i}.norm2.gain"]      = weights[f"layers.{i}.ln2.weight"]
+        mapped[f"layers.{i}.ffn.W1"]          = weights[f"layers.{i}.ffn.w1.weight"]
+        mapped[f"layers.{i}.ffn.W2"]          = weights[f"layers.{i}.ffn.w2.weight"]
+        mapped[f"layers.{i}.ffn.W3"]          = weights[f"layers.{i}.ffn.w3.weight"]
+
+    # strict=False 让 RoPE 里的非参数 buffer（cos/sin）不会被当成缺失 key 报错
+    transformer_lm.load_state_dict(mapped, strict=False)
+    return transformer_lm(in_indices)
+    
 
 
 def run_rmsnorm(

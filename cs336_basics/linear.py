@@ -24,7 +24,9 @@ class Linear(nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
         Apply the linear transformation to the input.
+        x: (..., in_features)  ->  (..., out_features)
+        W shape is (out_features, in_features)
         """
-        return self.W @ x
+        return x @ self.W.T
         
 
