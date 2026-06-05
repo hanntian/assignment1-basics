@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 from cs336_basics.RoPE import RoPE
 from cs336_basics.scaled_dot_product_attention import scaled_dot_product_attention
+from cs336_basics.linear import Linear
 
 class causal_multihead_self_attention(nn.Module):
     def __init__(self, d_model, num_heads, rope=False, theta=None, max_seq_len=None, device=None, dtype=None):
@@ -11,10 +12,10 @@ class causal_multihead_self_attention(nn.Module):
         self.num_heads = num_heads
         self.d_k = self.d_v = d_model // num_heads
 
-        self.W_q = nn.Linear(d_model, d_model, bias=False, device=device, dtype=dtype)
-        self.W_k = nn.Linear(d_model, d_model, bias=False, device=device, dtype=dtype)
-        self.W_v = nn.Linear(d_model, d_model, bias=False, device=device, dtype=dtype)
-        self.W_o = nn.Linear(d_model, d_model, bias=False, device=device, dtype=dtype)
+        self.W_q = Linear(d_model, d_model,  device=device, dtype=dtype)
+        self.W_k = Linear(d_model, d_model,  device=device, dtype=dtype)
+        self.W_v = Linear(d_model, d_model,  device=device, dtype=dtype)
+        self.W_o = Linear(d_model, d_model,  device=device, dtype=dtype)
 
         self.rope = RoPE(theta, self.d_k, max_seq_len, device=device) if rope else None
 

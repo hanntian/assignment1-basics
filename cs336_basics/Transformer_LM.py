@@ -58,10 +58,10 @@ class Transformer_LM(nn.Module):
         """
         # token embedding -> (batch_size, seq_len, d_model)
         x = self.token_embedding(input_ids)
-        # 依次过每个 transformer block
+        # 依次过每个 transformer block -> (batch_size, seq_len, d_model)
         for layer in self.layers:
             x = layer(x)
-        # final RMSNorm
+        # final RMSNorm -> (batch_size, seq_len, d_model)
         x = self.norm(x)
         # 投影到词表 logits -> (batch_size, seq_len, vocab_size)
         logits = self.output_projection(x)

@@ -163,10 +163,10 @@ def run_multihead_self_attention(
     multihead_attn = causal_multihead_self_attention(d_model, num_heads)
     multihead_attn.load_state_dict(
         {
-            "W_q.weight": q_proj_weight,
-            "W_k.weight": k_proj_weight,
-            "W_v.weight": v_proj_weight,
-            "W_o.weight": o_proj_weight,
+            "W_q.W": q_proj_weight,
+            "W_k.W": k_proj_weight,
+            "W_v.W": v_proj_weight,
+            "W_o.W": o_proj_weight,
         }
     )
     return multihead_attn(in_features)
@@ -214,10 +214,10 @@ def run_multihead_self_attention_with_rope(
     )
     multihead_attn.load_state_dict(
         {
-            "W_q.weight": q_proj_weight,
-            "W_k.weight": k_proj_weight,
-            "W_v.weight": v_proj_weight,
-            "W_o.weight": o_proj_weight,
+            "W_q.W": q_proj_weight,
+            "W_k.W": k_proj_weight,
+            "W_v.W": v_proj_weight,
+            "W_o.W": o_proj_weight,
         }
     )
     return multihead_attn(in_features, token_positions)
@@ -320,10 +320,10 @@ def run_transformer_block(
     transformer_block = TransformerBlock(d_model, num_heads, d_ff, theta, max_seq_len)
     transformer_block.load_state_dict(
         {
-            "attn.W_q.weight": weights["attn.q_proj.weight"],
-            "attn.W_k.weight": weights["attn.k_proj.weight"],
-            "attn.W_v.weight": weights["attn.v_proj.weight"],
-            "attn.W_o.weight": weights["attn.output_proj.weight"],
+            "attn.W_q.W": weights["attn.q_proj.weight"],
+            "attn.W_k.W": weights["attn.k_proj.weight"],
+            "attn.W_v.W": weights["attn.v_proj.weight"],
+            "attn.W_o.W": weights["attn.output_proj.weight"],
             "norm1.gain":      weights["ln1.weight"],
             "norm2.gain":      weights["ln2.weight"],
             "ffn.W1":          weights["ffn.w1.weight"],
@@ -425,10 +425,10 @@ def run_transformer_lm(
         "output_projection.W":           weights["lm_head.weight"],
     }
     for i in range(num_layers):
-        mapped[f"layers.{i}.attn.W_q.weight"] = weights[f"layers.{i}.attn.q_proj.weight"]
-        mapped[f"layers.{i}.attn.W_k.weight"] = weights[f"layers.{i}.attn.k_proj.weight"]
-        mapped[f"layers.{i}.attn.W_v.weight"] = weights[f"layers.{i}.attn.v_proj.weight"]
-        mapped[f"layers.{i}.attn.W_o.weight"] = weights[f"layers.{i}.attn.output_proj.weight"]
+        mapped[f"layers.{i}.attn.W_q.W"] = weights[f"layers.{i}.attn.q_proj.weight"]
+        mapped[f"layers.{i}.attn.W_k.W"] = weights[f"layers.{i}.attn.k_proj.weight"]
+        mapped[f"layers.{i}.attn.W_v.W"] = weights[f"layers.{i}.attn.v_proj.weight"]
+        mapped[f"layers.{i}.attn.W_o.W"] = weights[f"layers.{i}.attn.output_proj.weight"]
         mapped[f"layers.{i}.norm1.gain"]      = weights[f"layers.{i}.ln1.weight"]
         mapped[f"layers.{i}.norm2.gain"]      = weights[f"layers.{i}.ln2.weight"]
         mapped[f"layers.{i}.ffn.W1"]          = weights[f"layers.{i}.ffn.w1.weight"]
