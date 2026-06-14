@@ -18,5 +18,5 @@ class Embedding(nn.Module):
         """
         Lookup the embedding vectors for the given token IDs.
         """
-        return self.embedding_mat[token_ids]
+        return self.embedding_mat[token_ids] # dimension: (batch_size, sequence_length, embedding_dim)
        
